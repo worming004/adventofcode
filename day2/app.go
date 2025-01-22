@@ -9,17 +9,34 @@ import (
 func main() {
 	reports := parse()
 	var safeReports int
+	var safeDampenerReports int
 	for _, r := range reports {
 		if r.isSafe() {
 			safeReports++
 		}
+		if r.isDampenerSafe() {
+			safeDampenerReports++
+		}
 	}
 	println(safeReports)
+
+	println(safeDampenerReports)
 }
 
 type level int
 
 type report []level
+
+func (r report) generateAllSubReport() []report {
+	var result []report
+	for i := 0; i < len(r); i++ {
+		copyOfR := make(report, len(r))
+		copy(copyOfR, r)
+		subreport := append(copyOfR[:i], copyOfR[i+1:]...)
+		result = append(result, subreport)
+	}
+	return result
+}
 
 func (r report) isSafe() bool {
 	if !(r.isAlwaysIncreasing() || r.isAlwaysDecreasing()) {
@@ -31,6 +48,14 @@ func (r report) isSafe() bool {
 	}
 
 	return true
+}
+func (r report) isDampenerSafe() bool {
+	for _, subreport := range r.generateAllSubReport() {
+		if subreport.isSafe() {
+			return true
+		}
+	}
+	return false
 }
 
 func (r report) isAlwaysIncreasing() bool {
