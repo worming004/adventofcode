@@ -49,6 +49,12 @@ const (
 	separator state = 's'
 	second    state = 'o'
 	end       state = ')'
+
+	d    state = 'd'
+	o    state = 'o'
+	n    state = 'n'
+	tick state = '\''
+	t    state = 't'
 )
 
 type StateMachine struct {
@@ -58,12 +64,17 @@ type StateMachine struct {
 	first     int
 	secondStr string
 	second    int
+
+	doState        bool
+	evaluatingDo   bool
+	evaluatingDont bool
 }
 
 func NewState() *StateMachine {
 	sm := &StateMachine{}
 	sm.logger = log.New(os.Stdout, "state-machine: ", log.LstdFlags)
 	sm.Reinit()
+	sm.doState = true
 	return sm
 }
 
@@ -73,17 +84,20 @@ func (sm *StateMachine) Reinit() {
 	sm.firstStr = ""
 	sm.second = 0
 	sm.secondStr = ""
+	sm.evaluatingDo = false
+	sm.evaluatingDont = false
 }
 
 func (sm *StateMachine) readRune(r rune) {
 	sm.logger.Printf("state: %c, rune: %c\n", sm.state, r)
+	// mul part
 	if sm.state == nothing && r == 'm' {
 		sm.state = m
 	} else if sm.state == m && r == 'u' {
 		sm.state = u
 	} else if sm.state == u && r == 'l' {
 		sm.state = l
-	} else if sm.state == l && r == '(' {
+	} else if sm.state == l && r == '(' && sm.evaluatingDo == false && sm.evaluatingDont == false {
 		sm.state = enter
 	} else if sm.state == enter && unicode.IsDigit(r) {
 		sm.state = first
@@ -108,6 +122,31 @@ func (sm *StateMachine) readRune(r rune) {
 			panic(err)
 		}
 		sm.state = end
+		// do part
+	} else if sm.state == nothing && r == 'd' {
+		sm.state = d
+	} else if sm.state == d && r == 'o' {
+		sm.state = o
+		sm.evaluatingDo = true
+	} else if sm.state == o && r == '(' && sm.evaluatingDo == true {
+		sm.state = enter
+	} else if sm.state == enter && r == ')' && sm.evaluatingDo == true {
+		sm.doState = true
+		sm.logger.Printf("do state found\n")
+		// don't part branching
+	} else if sm.state == o && r == 'n' {
+		sm.evaluatingDo = false
+		sm.state = n
+	} else if sm.state == n && r == '\'' {
+		sm.state = tick
+	} else if sm.state == tick && r == 't' {
+		sm.evaluatingDont = true
+		sm.state = t
+	} else if sm.state == t && r == '(' && sm.evaluatingDont == true {
+		sm.state = enter
+	} else if sm.state == enter && r == ')' && sm.evaluatingDont == true {
+		sm.doState = false
+		sm.logger.Printf("don't state found\n")
 	} else {
 		if sm.state != nothing {
 			sm.Reinit()
@@ -117,7 +156,7 @@ func (sm *StateMachine) readRune(r rune) {
 }
 
 func (sm *StateMachine) IsEnd() bool {
-	return sm.state == end
+	return sm.state == end && sm.doState == true
 }
 
 func (sm *StateMachine) GetValues() (int, int) {
