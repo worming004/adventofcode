@@ -29,3 +29,14 @@ func TestDistance(t *testing.T) {
 		t.Errorf("Expected 5, got %d", p.distance())
 	}
 }
+
+var inputForSimilarity = input{
+	cola: []int{3, 4, 2, 1, 3, 3},
+	colb: []int{4, 3, 5, 3, 9, 3},
+}
+
+func TestSimilarity(t *testing.T) {
+	if inputForSimilarity.similarity() != 31 {
+		t.Errorf("Expected 0, got %d", inputForSimilarity.similarity())
+	}
+}

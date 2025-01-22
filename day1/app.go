@@ -41,11 +41,25 @@ func (p pairs) distance() int {
 	return result
 }
 
+func (p input) similarity() int {
+	result := 0
+	for _, a := range p.cola {
+		for _, b := range p.colb {
+			if a == b {
+				result = result + a
+			}
+		}
+	}
+	return result
+}
+
 func main() {
 	input := parse()
 	pairs := input.toPairs()
 	distance := pairs.distance()
-	fmt.Println(distance)
+	similarity := input.similarity()
+	fmt.Printf("Distance: %d\n", distance)
+	fmt.Printf("Similarity: %d\n", similarity)
 }
 
 func parse() input {
