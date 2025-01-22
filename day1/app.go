@@ -1,9 +1,8 @@
 package main
 
 import (
-	"bufio"
+	"aventofcode2024/parser"
 	"fmt"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -54,7 +53,7 @@ func (p input) similarity() int {
 }
 
 func main() {
-	input := parse()
+	input := parse("input.txt")
 	pairs := input.toPairs()
 	distance := pairs.distance()
 	similarity := input.similarity()
@@ -62,19 +61,12 @@ func main() {
 	fmt.Printf("Similarity: %d\n", similarity)
 }
 
-func parse() input {
-	f, err := os.Open("input.txt")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
+func parse(filePath string) input {
+	lines := parser.Parse(filePath)
 	result := input{}
 
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		t := scanner.Text()
-		splitted := strings.Split(t, " ")
+	for _, line := range lines {
+		splitted := strings.Split(line, " ")
 		splitted = append(splitted[:1], splitted[3:]...)
 		if len(splitted) != 2 {
 			panic(fmt.Errorf("Invalid input, expected length of 2, got %d", len(splitted)))
