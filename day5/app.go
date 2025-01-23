@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -29,13 +30,36 @@ func (r rule) IsValid(values []uint) bool {
 	return true
 }
 
-func (r rules) IsValid(values []uint) bool {
+func (r rules) IsValid(values []uint) (bool, rule) {
 	for _, rule := range r {
 		if !rule.IsValid(values) {
-			return false
+			return false, rule
 		}
 	}
-	return true
+	return true, rule{}
+}
+
+func (r rules) MakeValid(values []uint) []uint {
+	result := make([]uint, len(values))
+	copy(result, values)
+	for {
+		ok, rule := r.IsValid(result)
+		if ok {
+			break
+		}
+		a := rule.a
+		pos := 0
+		for i, v := range result {
+			if v == a {
+				pos = i
+				break
+			}
+		}
+
+		result = append(result[:pos], result[pos+1:]...)
+		result = append([]uint{a}, result...)
+	}
+	return result
 }
 
 func getMiddle(values []uint) uint {
@@ -98,10 +122,25 @@ func main() {
 	rules, values := Parse(string(content))
 	var result uint
 	for _, v := range values {
-		if rules.IsValid(v) {
+		if ok, _ := rules.IsValid(v); ok {
 			result += getMiddle(v)
 		}
 	}
 
-	fmt.Println(result)
+	fmt.Printf("First half result: %d\n", result)
+
+	var result2 uint
+	for i, v := range values {
+		log.Printf("Processing %d/%d\n", i, len(values))
+		ok, _ := rules.IsValid(v)
+		if ok {
+			continue
+		}
+
+		corrected := rules.MakeValid(v)
+		result2 += getMiddle(corrected)
+
+	}
+
+	fmt.Printf("Second half result: %d\n", result2)
 }

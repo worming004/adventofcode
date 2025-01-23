@@ -48,7 +48,7 @@ func Test_rules_IsValid(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isValid := tt.r.IsValid(tt.args.values)
+			isValid, _ := tt.r.IsValid(tt.args.values)
 			if got := isValid; got != tt.want {
 				t.Errorf("rules.IsValid() = %v, want %v", got, tt.want)
 				return
@@ -119,4 +119,25 @@ func sliceEquals(a, b []uint) bool {
 		}
 	}
 	return true
+}
+
+func TestMakeValid(t *testing.T) {
+	tests := []struct {
+		name     string
+		r        rules
+		input    []uint
+		expected []uint
+	}{
+		{"test1", testRules, []uint{75, 97, 47, 61, 53}, []uint{97, 75, 47, 61, 53}},
+		{"test2", testRules, []uint{61, 13, 29}, []uint{61, 29, 13}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := tt.r.MakeValid(tt.input)
+			if !sliceEquals(res, tt.expected) {
+				t.Errorf("makeValid() = %v, want %v", res, tt.expected)
+			}
+		})
+	}
 }
