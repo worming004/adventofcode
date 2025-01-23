@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type rules []rule
@@ -130,17 +130,25 @@ func main() {
 	fmt.Printf("First half result: %d\n", result)
 
 	var result2 uint
-	for i, v := range values {
-		log.Printf("Processing %d/%d\n", i, len(values))
-		ok, _ := rules.IsValid(v)
-		if ok {
-			continue
-		}
+	wg := sync.WaitGroup{}
+	wg.Add(len(values))
+	for _, v := range values {
+		mu := sync.Mutex{}
+		go func(sv []uint) {
+			defer wg.Done()
+			ok, _ := rules.IsValid(v)
+			if ok {
+				return
+			}
 
-		corrected := rules.MakeValid(v)
-		result2 += getMiddle(corrected)
+			corrected := rules.MakeValid(v)
+			mu.Lock()
+			defer mu.Unlock()
+			result2 += getMiddle(corrected)
+		}(v)
 
 	}
+	wg.Wait()
 
 	fmt.Printf("Second half result: %d\n", result2)
 }
