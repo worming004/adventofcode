@@ -16,7 +16,7 @@ func main() {
 	parsed := parse(string(content))
 	result := 0
 	for _, l := range parsed {
-		tester := newOperationTester(l.result, l.values)
+		tester := newSecondOperationTester(l.result, l.values)
 		if tester.test() {
 			result += tester.result
 		}
@@ -59,6 +59,19 @@ func add(a, b int) int {
 func mult(a, b int) int {
 	return a * b
 }
+func concat(a, b int) int {
+	bCopy := b
+	digitCounter := 0
+	for bCopy > 0 {
+		bCopy = bCopy / 10
+		digitCounter++
+	}
+	multiplier := 1
+	for i := 0; i < digitCounter; i++ {
+		multiplier *= 10
+	}
+	return (a * multiplier) + b
+}
 
 type operationTester struct {
 	result    int
@@ -66,11 +79,19 @@ type operationTester struct {
 	operators []operator
 }
 
-func newOperationTester(expectedResult int, values []int) *operationTester {
+func newDefaultOperationTester(expectedResult int, values []int) *operationTester {
 	return &operationTester{
 		expectedResult,
 		values,
 		[]operator{add, mult},
+	}
+}
+
+func newSecondOperationTester(expectedResult int, values []int) *operationTester {
+	return &operationTester{
+		expectedResult,
+		values,
+		[]operator{add, mult, concat},
 	}
 }
 
