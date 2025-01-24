@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
+	"time"
 )
 
 type position struct {
@@ -14,17 +16,27 @@ type position struct {
 type caseContent string
 
 const (
-	obstacle    caseContent = "obstacle"
-	guard       caseContent = "guard"
-	empty       caseContent = "empty"
-	visited     caseContent = "visited"
-	outOfBounds caseContent = "outOfBounds"
+	obstacle     caseContent = "obstacle"
+	empty        caseContent = "empty"
+	visited      caseContent = "visited"
+	visitedTwice caseContent = "visitedTwice"
+	outOfBounds  caseContent = "outOfBounds"
 )
 
 type guardMap struct {
-	content  [][]caseContent
-	guardian *guardian
+	content   [][]caseContent
+	guardian  *guardian
+	endResult parcourResult
+	visited   int
 }
+
+type parcourResult string
+
+const (
+	unknown parcourResult = "unknown"
+	success parcourResult = "success"
+	twice   parcourResult = "twice"
+)
 
 type facing string
 
@@ -67,7 +79,7 @@ func Parse(input string) *guardMap {
 			case 'X':
 				result.content[i][j] = visited
 			case '^':
-				result.content[i][j] = guard
+				result.content[i][j] = visited
 				result.guardian = &guardian{facing: north, position: position{i, j}}
 			default:
 				panic("Invalid character")
@@ -98,15 +110,21 @@ func (g *guardMap) Tick() bool {
 
 	contentToTry := g.GetCasecontent(positionToTry)
 	switch contentToTry {
-	case empty, visited:
-		g.content[guardPos.x][guardPos.y] = visited
+	case empty:
 		g.guardian.position = positionToTry
+		g.content[g.guardian.x][g.guardian.y] = visited
+	case visited, visitedTwice:
+		g.guardian.position = positionToTry
+		g.content[g.guardian.x][g.guardian.y] = visitedTwice
+		g.visited++
 	case obstacle:
 		g.guardian.facing = Rotate(g.guardian.facing)
 		return g.Tick()
 	case outOfBounds:
-		g.content[guardPos.x][guardPos.y] = visited
+		g.endResult = success
 		return false
+	default:
+		panic("Invalid case content")
 	}
 
 	return true
@@ -117,6 +135,17 @@ func (g *guardMap) CountVisited() int {
 	for _, line := range (*g).content {
 		for _, c := range line {
 			if c == visited {
+				count++
+			}
+		}
+	}
+	return count
+}
+func (g *guardMap) CountVisitedTwice() int {
+	count := 0
+	for _, line := range (*g).content {
+		for _, c := range line {
+			if c == visitedTwice {
 				count++
 			}
 		}
@@ -141,17 +170,21 @@ func Rotate(d facing) facing {
 
 func (g *guardMap) String() string {
 	var result strings.Builder
-	for _, line := range (*g).content {
-		for _, c := range line {
+	for i, line := range (*g).content {
+		for j, c := range line {
+			if i == g.guardian.x && j == g.guardian.y {
+				result.WriteRune('^')
+				continue
+			}
 			switch c {
 			case empty:
 				result.WriteRune('.')
 			case obstacle:
 				result.WriteRune('#')
-			case guard:
-				result.WriteRune('^')
 			case visited:
 				result.WriteRune('X')
+			case visitedTwice:
+				result.WriteRune('+')
 			}
 		}
 		result.WriteRune('\n')
@@ -166,9 +199,85 @@ func main() {
 	}
 
 	myMap := Parse(string(content))
-	for myMap.Tick() {
-		log.Println(myMap)
+	allEmptyPos := myMap.FindAllEmpty()
+	wg := sync.WaitGroup{}
+	mu := sync.Mutex{}
+	wg.Add(len(allEmptyPos))
+	loopCounter := 0
+	for _, emptyPos := range allEmptyPos {
+		go func() {
+			defer wg.Done()
+			submap := myMap.Clone()
+			submap.content[emptyPos.x][emptyPos.y] = obstacle
+			for i := 0; i < 10000000; i++ {
+				if !submap.Tick() {
+					log.Println("break")
+					return
+				}
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			loopCounter++
+			log.Println("inc, current value: %d", loopCounter)
+		}()
 	}
-	count := myMap.CountVisited()
-	fmt.Println(count)
+
+	wg.Wait()
+
+	fmt.Printf("loopCounter: %d", loopCounter)
+	fmt.Printf("total solution tried: %d", len(allEmptyPos))
+}
+
+func (g *guardMap) Clone() *guardMap {
+	content := make([][]caseContent, len(g.content))
+	for i, line := range g.content {
+		content[i] = make([]caseContent, len(line))
+		copy(content[i], line)
+	}
+	return &guardMap{
+		content: content,
+		guardian: &guardian{
+			facing:   g.guardian.facing,
+			position: g.guardian.position,
+		},
+		endResult: unknown,
+		visited:   0,
+	}
+}
+
+func (g *guardMap) FindAllEmpty() []position {
+	var result []position
+	for i, line := range (*g).content {
+		for j, c := range line {
+			if c == empty {
+				result = append(result, position{i, j})
+			}
+		}
+	}
+
+	return result
+}
+func foo() {
+
+	content, err := os.ReadFile("input.txt")
+	if err != nil {
+		panic(err)
+	}
+
+	myMap := Parse(string(content))
+	for myMap.Tick() {
+		if os.Getenv("APP_PRINT") != "" {
+			fmt.Println(myMap.String())
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	fmt.Println(myMap)
+	fmt.Printf("EndResult: %s\n", myMap.endResult)
+	fmt.Printf("Position: %v\n", myMap.guardian.position)
+	fmt.Printf("VisitedTwice: %d\n", myMap.CountVisitedTwice())
+	// obs := myMap.ExportObstacleUsed()
+	// for _, o := range obs {
+	// 	fmt.Println(o)
+	// }
 }
