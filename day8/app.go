@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"strings"
@@ -89,24 +91,22 @@ func (g *Gamemap) FindAntinodeByAntennaType(a Antenna, as []Antenna) {
 		return
 	}
 	for _, sub := range as {
+		//antinode1
 		g.FindAntinodeWith2Antennas(a, sub)
+		//antinode2
+		g.FindAntinodeWith2Antennas(sub, a)
 	}
 	g.FindAntinodeByAntennaType(as[0], as[1:])
 }
 
 func (g *Gamemap) FindAntinodeWith2Antennas(a1, a2 Antenna) {
-	//antinode1
-	{
-		position := FindAntinodeWith2Antennas(a1, a2)
-		g.addAntinodeIfNotExists(Antinode(true), position)
-		g.history = append(g.history, step{g.sizeX, g.sizeY, a1, a2, position})
-	}
-
-	// antinode2
-	{
-		position := FindAntinodeWith2Antennas(a2, a1)
-		g.addAntinodeIfNotExists(Antinode(true), position)
-		g.history = append(g.history, step{g.sizeX, g.sizeY, a1, a2, position})
+	g.antinodes[a1.Position] = Antinode(true)
+	g.antinodes[a2.Position] = Antinode(true)
+	position := FindAntinodeWith2Antennas(a1, a2)
+	r := g.addAntinodeIfNotExists(Antinode(true), position)
+	g.history = append(g.history, step{g.sizeX, g.sizeY, a1, a2, position})
+	if r {
+		g.FindAntinodeWith2Antennas(Antenna{position, a1.antennaType}, a1)
 	}
 }
 
@@ -120,23 +120,28 @@ func FindAntinodeWith2Antennas(a1, a2 Antenna) Position {
 	return Position{x, y}
 }
 
-func (g *Gamemap) addAntinodeIfNotExists(a Antinode, p Position) {
+func (g *Gamemap) addAntinodeIfNotExists(a Antinode, p Position) bool {
 	if p.x < 0 || p.x >= g.sizeX || p.y < 0 || p.y >= g.sizeY {
 		log.Printf("antinode out of bounds, %v", p)
-		return
+		return false
 	}
 
 	g.antinodes[p] = a
+	return true
 }
 
 func main() {
 	entries, err := os.ReadDir("steps")
 
-	if err != nil {
+	if errors.Is(err, fs.ErrNotExist) {
+		log.Printf("steps dir does not exist")
+		os.Mkdir("steps", 0744)
+	} else if err != nil {
 		panic(err)
-	}
-	for _, entry := range entries {
-		os.Remove(entry.Name())
+	} else {
+		for _, entry := range entries {
+			os.Remove(entry.Name())
+		}
 	}
 
 	input, err := os.ReadFile("input.txt")
@@ -148,9 +153,12 @@ func main() {
 	gamemap.SeekAntinodes()
 
 	for i, s := range gamemap.history {
-		os.WriteFile(fmt.Sprintf("steps/step%d.txt", i), []byte(s.Print()), 0644)
-		fmt.Println(s.Print())
+		err := os.WriteFile(fmt.Sprintf("steps/step%d.txt", i), []byte(s.Print()), 0644)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	fmt.Println(gamemap.CountAntinode())
+
 }

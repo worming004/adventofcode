@@ -56,21 +56,21 @@ var expected string = `.........
 .........`
 
 func TestSeekAntinodes(t *testing.T) {
-	gamemap := Parse(`.........
-.........
-.........
-..CAD....
-..B.B....
-..DAC....
-.........
-.........
-.........`,
+	gamemap := Parse(`........
+........
+........
+..CAD...
+..B.B...
+..DAC...
+........
+........
+........`,
 	)
 
 	gamemap.SeekAntinodes()
 
-	if len(gamemap.antinodes) != 8 {
-		t.Errorf("len(antinodes) = %d; want 8", len(gamemap.antinodes))
+	if len(gamemap.antinodes) != 16 {
+		t.Errorf("len(antinodes) = %d; want 16", len(gamemap.antinodes))
 	}
 
 	expectedPositions := []Position{
@@ -95,8 +95,8 @@ func TestSeekAntinodes(t *testing.T) {
 	}
 
 	count := gamemap.CountAntinode()
-	if count != 8 {
-		t.Errorf("count = %d; want 8", count)
+	if count != 16 {
+		t.Errorf("count = %d; want 16", count)
 	}
 }
 
@@ -105,7 +105,35 @@ func TestSeekAntinodesOOB(t *testing.T) {
 .AA
 ...`)
 	gamemap.SeekAntinodes()
-	if len(gamemap.antinodes) != 1 {
-		t.Errorf("len(antinodes) = %d; want 1", len(gamemap.antinodes))
+	if len(gamemap.antinodes) != 3 {
+		t.Errorf("len(antinodes) = %d; want 3", len(gamemap.antinodes))
+	}
+}
+func TestSeekAntinodesResonance(t *testing.T) {
+	gamemap := Parse(`............
+.A..........
+...A........
+............
+............
+............
+............`)
+	gamemap.SeekAntinodes()
+	if len(gamemap.antinodes) != 6 {
+		t.Errorf("len(antinodes) = %d; want 4", len(gamemap.antinodes))
+	}
+
+	expectedPositions := []Position{
+		{1, 1},
+		{3, 2},
+		{5, 3},
+		{7, 4},
+		{9, 5},
+		{11, 6},
+	}
+
+	for _, expectedPosition := range expectedPositions {
+		if a, ok := gamemap.antinodes[expectedPosition]; !ok && !bool(a) {
+			t.Errorf("antinode %v not found", expectedPosition)
+		}
 	}
 }
