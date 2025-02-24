@@ -60,7 +60,7 @@ func TestToDiskMap(t *testing.T) {
 	}
 }
 
-func TestCompact(t *testing.T) {
+func TestCompactFirst(t *testing.T) {
 	type args struct {
 		dms string
 	}
@@ -91,7 +91,7 @@ func TestCompact(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dm := ToDiskMap(tt.args.dms)
-			if got := Compact(dm); !reflect.DeepEqual(got, tt.want) {
+			if got := CompactFirst(dm); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Compact() = %v, want %v", got, tt.want)
 			}
 		})
@@ -125,6 +125,76 @@ func TestToBlock(t *testing.T) {
 	// 	t.Errorf("ToBlock():\n%v.\nwant:\n%v", result, expected)
 	// }
 }
+func TestCompactSecond(t *testing.T) {
+	type args struct {
+		dms string
+	}
+	tests := []struct {
+		name string
+		args args
+		want Blocks
+	}{
+		{
+			"2333133121414131402",
+			args{"2333133121414131402"},
+			//00992111777.44.333....5555.6666.....8888..
+			Blocks{}.
+				AddWithId(0).
+				AddWithId(0).
+				AddWithId(9).
+				AddWithId(9).
+				AddWithId(2).
+				AddWithId(1).
+				AddWithId(1).
+				AddWithId(1).
+				AddWithId(7).
+				AddWithId(7).
+				AddWithId(7).
+				AddEmpty().
+				AddWithId(4).
+				AddWithId(4).
+				AddEmpty().
+				AddWithId(3).
+				AddWithId(3).
+				AddWithId(3).
+				AddEmpty().
+				AddEmpty().
+				AddEmpty().
+				AddEmpty().
+				AddWithId(5).
+				AddWithId(5).
+				AddWithId(5).
+				AddWithId(5).
+				AddEmpty().
+				AddWithId(6).
+				AddWithId(6).
+				AddWithId(6).
+				AddWithId(6).
+				AddEmpty().
+				AddEmpty().
+				AddEmpty().
+				AddEmpty().
+				AddEmpty().
+				AddWithId(8).
+				AddWithId(8).
+				AddWithId(8).
+				AddWithId(8).
+				AddEmpty().
+				AddEmpty(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dm := ToDiskMap(tt.args.dms)
+			result := CompactSecond(dm)
+			if diff := cmp.Diff(tt.want, result); diff != "" {
+				t.Log("got: \n" + result.String())
+				t.Log("expect: \n" + tt.want.String())
+				t.Errorf("Slices do not match (-expected +actual):\n%s", diff)
+			}
+		})
+	}
+}
 
 func (bs Blocks) AddWithId(id uint) Blocks {
 	newBlock := Block{Position: uint(len(bs)), ID: id, IsEmpty: false}
@@ -149,7 +219,7 @@ func TestChecksum(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dm := ToDiskMap(tt.args.dms)
-			compacted := Compact(dm)
+			compacted := CompactFirst(dm)
 			res := Checksum(compacted)
 			if res != tt.want {
 				t.Errorf("Checksum() = %v, want %v", res, tt.want)
