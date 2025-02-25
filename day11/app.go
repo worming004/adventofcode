@@ -18,16 +18,15 @@ var stdoutLogger = log.New(os.Stdout, "", log.LstdFlags)
 var nullLogger = log.New(io.Discard, "", log.LstdFlags)
 
 func main() {
-	i := Parse(input)
-	state := NewState(i, WithLogger(*nullLogger))
-	for i := 0; i < 25; i++ {
-		state.Blink()
-		if state.BlinkCount%10 == 0 {
-			fmt.Printf("BlinkCount: %d, Length: %d\n", state.BlinkCount, state.Length())
-		}
+	loop, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		panic(err)
 	}
+	i := Parse(input)
+	state := NewState(i, loop, WithLogger(*nullLogger))
+	total := state.Blink()
 
-	fmt.Println(state.Length())
+	fmt.Println(total)
 }
 
 type Stone int
@@ -79,18 +78,19 @@ func split(i, digitCount int) struct{ a, b int } {
 }
 
 type AppState struct {
-	Stones     []Stone
-	Logger     log.Logger
-	BlinkCount int
+	Stones   []Stone
+	Logger   log.Logger
+	Loop     int
+	KnownRes map[StoneBlink]int
 }
 
-func NewState(i []int, options ...AppStateOptions) AppState {
+func NewState(i []int, loop int, options ...AppStateOptions) AppState {
 	stones := make([]Stone, len(i))
 	for j, v := range i {
 		stones[j] = NewStone(v)
 	}
 	defaultLogger := log.New(os.Stdout, "", log.LstdFlags)
-	a := AppState{Stones: stones, Logger: *defaultLogger, BlinkCount: 0}
+	a := AppState{Stones: stones, Logger: *defaultLogger, Loop: loop, KnownRes: map[StoneBlink]int{}}
 	for _, o := range options {
 		o(&a)
 	}
@@ -128,15 +128,31 @@ func atoi(s string) int {
 }
 
 type AppStateOptions func(*AppState)
+type StoneBlink struct {
+	Stone Stone
+	Blink int
+}
 
-func (a *AppState) Blink() {
-	stones := make([]Stone, 0, len(a.Stones)*2)
-	for _, s := range a.Stones {
-		stones = append(stones, Blink(s)...)
+func (a *AppState) Blink() int {
+	if a.Loop == 0 {
+		return a.Length()
 	}
-	a.Stones = stones
-	a.BlinkCount++
-	a.Logger.Printf("BlinkCount: %d, State: %v\n\n", a.BlinkCount, a.Stones)
+	total := 0
+	for _, s := range a.Stones {
+		subTotal := 0
+		if v, ok := a.KnownRes[StoneBlink{s, a.Loop}]; ok {
+			subTotal = v
+		} else {
+			sub := AppState{Logger: a.Logger, KnownRes: a.KnownRes}
+			sub.Loop = a.Loop - 1
+			sub.Stones = Blink(s)
+			subTotal = sub.Blink()
+		}
+		total += subTotal
+		a.KnownRes[StoneBlink{s, a.Loop}] = subTotal
+	}
+
+	return total
 }
 
 func (a *AppState) Length() int {

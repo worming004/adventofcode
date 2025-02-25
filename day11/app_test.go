@@ -61,6 +61,7 @@ func TestGlobal(t *testing.T) {
 	}{
 		{"125 17", 6, 22},
 		{"125 17", 25, 55312},
+		{"2701 64945 0 9959979 93 781524 620 1", 25, 198075},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
@@ -69,13 +70,11 @@ func TestGlobal(t *testing.T) {
 			testLogger := log.New(&buff, "", log.LstdFlags)
 			input := tt.input
 			parsed := Parse(input)
-			state := NewState(parsed, WithLogger(*testLogger))
-			for i := 0; i < tt.loop; i++ {
-				state.Blink()
-			}
+			state := NewState(parsed, tt.loop, WithLogger(*testLogger))
+			l := state.Blink()
 
-			if state.Length() != tt.expected {
-				t.Errorf("Expected %d, got %d", tt.expected, state.Length())
+			if l != tt.expected {
+				t.Errorf("Expected %d, got %d", tt.expected, l)
 			}
 			if t.Failed() {
 				t.Log("\n" + buff.String())
