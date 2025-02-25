@@ -17,7 +17,7 @@ MIIISIJEEE
 MMMISSJEEE`
 	m := CreateMap(input)
 
-	m.FindAndSetRegions(input)
+	m.FindAndSetRegions()
 	regions := m.Regions
 	if len(regions) != 11 {
 
@@ -55,6 +55,34 @@ func TestPerimeter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.args.r.Perimeter(); got != tt.want {
 				t.Errorf("Perimeter() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSidePerimeter(t *testing.T) {
+	type args struct {
+		input string
+	}
+	tests := []struct {
+		name           string
+		args           args
+		forRegionValue string
+		want           int
+	}{
+		{"E shape", args{`EEEEE
+EXXXX
+EEEEE
+EXXXX
+EEEEE`}, "E", 12},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := CreateMap(tt.args.input)
+			m.FindAndSetRegions()
+			r := m.GetRegionsByValue("E")[0]
+			if got := r.Sides(); got != tt.want {
+				t.Errorf("Sides Perimeter() = %v, want %v", got, tt.want)
 			}
 		})
 	}
