@@ -20,10 +20,15 @@ var try string
 func main() {
 	reader := strings.NewReader(input)
 	inputs := Parse(reader)
+	//part2
+	for _, i := range inputs {
+		i.x = i.x + 10000000000000
+		i.y = i.y + 10000000000000
+	}
 	total := 0
 	var invalid []resolveRes
 	for _, i := range inputs {
-		r := resolveInput(i)
+		r := resolveInput(*i)
 		fmt.Println(r.Pretty())
 		if !r.isValid {
 			invalid = append(invalid, r)
@@ -39,9 +44,9 @@ type Input struct {
 	a, b, c, d, x, y int
 }
 
-func Parse(r io.Reader) []Input {
+func Parse(r io.Reader) []*Input {
 	scanner := bufio.NewScanner(r)
-	var res []Input
+	var res []*Input
 	for scanner.Scan() {
 		if scanner.Text() == "" {
 			break
@@ -58,7 +63,7 @@ func Parse(r io.Reader) []Input {
 		bmatches := re.FindAllString(lineButtonB, -1)
 		pmatches := re.FindAllString(linePrize, -1)
 
-		res = append(res, Input{
+		res = append(res, &Input{
 			a: atoi(amatches[0]),
 			b: atoi(amatches[1]),
 			c: atoi(bmatches[0]),
